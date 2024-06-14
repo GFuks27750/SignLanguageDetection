@@ -2,6 +2,7 @@ import pickle
 import cv2
 import mediapipe as mp
 import numpy as np
+import time
 
 # Load the trained model
 model_dict = pickle.load(open('./model.p', 'rb'))
@@ -21,7 +22,14 @@ hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.3)
 
 # Labels dictionary
 labels_dict = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G', 7: 'H', 8: 'I', 9: 'J', 10: 'K', 11: 'L',
-               12: 'M', 13: 'N', 14: 'O', 15: 'P', 16: 'R', 17: 'S'}
+               12: 'M', 13: 'N', 14: 'O', 15: 'P', 16: 'R', 17: 'S', 18: 'T', 19: 'U', 20: 'W', 21: 'Y', 22: 'Z',
+               23: 'START', 24: 'STOP'}
+
+# State variables
+collecting_word = False
+current_word = ""
+last_added_time = 0
+word_display_time = 0
 
 while True:
     data_aux = []
@@ -70,11 +78,29 @@ while True:
         y2 = int(max(y_) * H) - 10
 
         prediction = model.predict([np.asarray(data_aux)])
-
         predicted_character = labels_dict[int(prediction[0])]
+
+        current_time = time.time()
+
+        if predicted_character == 'START':
+            collecting_word = True
+            current_word = ""
+            last_added_time = current_time
+        elif predicted_character == 'STOP':
+            collecting_word = False
+            word_display_time = current_time
+        elif collecting_word:
+            if current_time - last_added_time > 1:  # Add letter every second
+                current_word += predicted_character
+                last_added_time = current_time
 
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 0), 4)
         cv2.putText(frame, predicted_character, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 0, 0), 3, cv2.LINE_AA)
+
+    if collecting_word:
+        cv2.putText(frame, "Word: " + current_word, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (255, 0, 0), 3, cv2.LINE_AA)
+    elif word_display_time > 0 and current_time - word_display_time < 5:  # Display the word for 5 seconds after STOP
+        cv2.putText(frame, "Word: " + current_word, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (255, 0, 0), 3, cv2.LINE_AA)
 
     cv2.imshow('frame', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
