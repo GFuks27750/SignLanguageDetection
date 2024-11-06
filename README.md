@@ -7,7 +7,7 @@ This project was made, to help me understand librarys such as:
   <li>Scikit learn</li>
   <li>Pickle</li>
   <li>Numpy</li>
-  <li>CV@</li>
+  <li>CV2</li>
 </ul>
 
 ## How it works?
